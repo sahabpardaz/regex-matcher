@@ -1,4 +1,6 @@
 # Regex Matcher
+[![Tests](https://github.com/sahabpardaz/regex-matcher/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/sahabpardaz/regex-matcher/actions/workflows/maven.yml)
+[![JitPack](https://jitpack.io/v/sahabpardaz/regex-matcher.svg)](https://jitpack.io/#sahabpardaz/regex-matcher)
 
 This library provides facilities to match an input string against a collection of regex patterns.
 This library acts as a wrapper around the popular `Chimera` library, which allows it to be used in Java.
