@@ -1,0 +1,5 @@
+---
+before_install:
+  - git lfs pull
+install:
+  - mvn install -DskipTests
