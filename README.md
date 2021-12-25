@@ -42,8 +42,9 @@ a linux library file in the maven resource folder and is used by the Java progra
 Since compiling the C++ codes requires the `Chimera` library to be installed, all the requirements
 for compiling the C++ source files are provided in the form of a docker file. This docker file,
 in addition to providing all the requirements related to the C++ codes in an isolated environment,
-also builds them automatically and puts the generated library file (.so file) in the required path
-for the Java language. For this reason, the only requirement to rebuild the module is to have Docker installed.
+also builds them automatically and puts the generated library file (.so file) in 
+compressed format (tar.gz file) in the required path for the Java language. For this reason, the only 
+requirement to rebuild the module is to have Docker installed.
 
 First, apply the changes you want to make to the C++ source codes. Then execute below command:
 
