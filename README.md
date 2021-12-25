@@ -1,5 +1,13 @@
 # Regex Matcher
 [![Tests](https://github.com/sahabpardaz/regex-matcher/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/sahabpardaz/regex-matcher/actions/workflows/maven.yml)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=coverage)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=security_rating)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=sqale_index)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=sahabpardaz_regex-matcher&metric=alert_status)](https://sonarcloud.io/dashboard?id=sahabpardaz_regex-matcher)
 [![JitPack](https://jitpack.io/v/sahabpardaz/regex-matcher.svg)](https://jitpack.io/#sahabpardaz/regex-matcher)
 
 This library provides facilities to match an input string against a collection of regex patterns.

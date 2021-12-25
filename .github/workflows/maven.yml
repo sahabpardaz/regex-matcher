@@ -17,3 +17,15 @@ jobs:
 
       - name: Run Tests
         run: mvn test
+
+      - name: Setup Java 11 # SonarCloud does not support Java 8 anymore!
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+      - name: Scan with SonarCloud
+        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
