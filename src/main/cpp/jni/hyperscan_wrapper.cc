@@ -129,8 +129,8 @@ bool HyperscanWrapper::Match(const string& input, set<unsigned int>* results) {
     return true;
 }
 
-const char* HyperscanWrapper::GetLastError() const {
-    return last_error_.c_str();
+std::string HyperscanWrapper::GetLastError() const {
+    return last_error_;
 }
 
 void HyperscanWrapper::CleanUp() {

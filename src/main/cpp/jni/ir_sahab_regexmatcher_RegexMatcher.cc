@@ -3,6 +3,8 @@
 #include <set>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <string>
 
 using sahab::HyperscanWrapper;
 
@@ -22,71 +24,87 @@ const char* java_pattern_preparation_exception_path = "ir/sahab/regexmatcher/exc
 //       created instances. An instance is created by calling newInstance() and it is destroyed by calling close().
 unsigned int num_created_instances = 0;
 std::map<unsigned int, std::unique_ptr<HyperscanWrapper> > instances;
+std::mutex instances_map_mutex;
 
-static HyperscanWrapper* GetHyperscanInstance(JNIEnv* jenv, jlong handle) {
-    HyperscanWrapper* instance = nullptr;
-    try {
-        instance = instances.at(static_cast<unsigned int>(handle)).get();
-    } catch (std::out_of_range& e) {
-        jclass clazz = jenv->FindClass(java_assertion_error_path);
-        std::string msg = "Invalid instance handle: handle = ";
-        msg += handle;
-        if (jenv->ThrowNew(clazz, msg.c_str()) < 0) {
-            fprintf(stderr, "Failed to throw exception: %s.", msg.c_str());
-            std::exit(EXIT_FAILURE);
-        }
+static void ThrowJavaException(JNIEnv* jenv, const char* java_error_class_path, std::string message) {
+    jclass clazz = jenv->FindClass(java_error_class_path);
+    if (jenv->ThrowNew(clazz, message.c_str()) < 0) {
+        fprintf(stderr, "Failed to throw exception: %s.", message.c_str());
+        std::exit(EXIT_FAILURE);
     }
+}
+
+static HyperscanWrapper* GetHyperscanInstance(JNIEnv* jenv, jlong jinstance_id) {
+    HyperscanWrapper* instance = nullptr;
+    auto instance_id = static_cast<unsigned int>(jinstance_id);
+    try {
+        instances_map_mutex.lock();
+        instance = instances.at(instance_id).get();
+    } catch (std::out_of_range& e) {
+        ThrowJavaException(jenv, java_assertion_error_path, "Either instance closed or not valid: Instance ID = "
+            + std::to_string(instance_id));
+    }
+    instances_map_mutex.unlock();
     return instance;
 }
 
 JNIEXPORT jlong JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_newInstance(
         JNIEnv* jenv, jobject jobj) {
-    ++num_created_instances;
+    instances_map_mutex.lock();
+    num_created_instances++;
     instances[num_created_instances] = std::unique_ptr<HyperscanWrapper>(new HyperscanWrapper());
+    instances_map_mutex.unlock();
     return num_created_instances;
 }
 
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_close(
-        JNIEnv* jenv, jobject jobj, jlong jinstance_handle) {
-    instances.erase(static_cast<unsigned int>(jinstance_handle));
+        JNIEnv* jenv, jobject jobj, jlong jinstance_id) {
+    instances_map_mutex.lock();
+    instances.erase(static_cast<unsigned int>(jinstance_id));
+    instances_map_mutex.unlock();
 }
 
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_addPattern(
-        JNIEnv* jenv, jobject jobj, jlong jinstance_handle, jlong jpattern_id, jstring jpattern,
+        JNIEnv* jenv, jobject jobj, jlong jinstance_id, jlong jpattern_id, jstring jpattern,
         jboolean is_case_sensitive) {
-    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_handle);
-    if (instance == nullptr)
-        return;
+    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_id);
+    if (instance == nullptr) {
+        return; // C++ continues to work after Java exception is thrown
+    }
 
     auto pattern = jenv->GetStringUTFChars(jpattern, nullptr);
-    instance->AddPattern(static_cast<unsigned int>(jpattern_id), pattern, is_case_sensitive);
+    if (pattern == nullptr) {
+        ThrowJavaException(jenv, java_assertion_error_path, "Unable to convert java 'pattern' string to cpp string!");
+        return; // C++ continues to work after Java exception is thrown
+    }
+    instance->AddPattern(static_cast<unsigned int>(jpattern_id), pattern, (bool)(is_case_sensitive == JNI_TRUE));
     jenv->ReleaseStringUTFChars(jpattern, pattern);
 }
 
 JNIEXPORT jboolean JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_removePattern(
-        JNIEnv* jenv, jobject jobj, jlong jinstance_handle, jlong jpattern_id) {
-    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_handle);
-    if (instance == nullptr)
-        return JNI_FALSE;
+        JNIEnv* jenv, jobject jobj, jlong jinstance_id, jlong jpattern_id) {
+    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_id);
+    if (instance == nullptr) {
+        return JNI_FALSE; // C++ continues to work after Java exception is thrown
+    }
 
-    return instance->RemovePattern(static_cast<unsigned int>(jpattern_id)) ?
-            JNI_TRUE : JNI_FALSE;
+    return instance->RemovePattern(static_cast<unsigned int>(jpattern_id)) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_preparePatterns(
-        JNIEnv* jenv, jobject jobj, jlong jinstance_handle) {
-    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_handle);
-    if (instance == nullptr)
-        return;
+        JNIEnv* jenv, jobject jobj, jlong jinstance_id) {
+    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_id);
+    if (instance == nullptr) {
+        return; // C++ continues to work after Java exception is thrown
+    }
 
-    auto result = static_cast<jlong>(instance->CompilePatterns());
+    auto result = instance->CompilePatterns();
     if (result != 0) {
         jclass clazz = jenv->FindClass(java_pattern_preparation_exception_path);
         jmethodID clazz_constructor = jenv->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J)V");
-        std::string msg = "Failed to prepare patterns:  ";
-        msg.append(instance->GetLastError());
+        std::string msg = "Failed to prepare patterns: " + instance->GetLastError();
         auto jexception = jenv->NewObject(clazz, clazz_constructor,
-                                          jenv->NewStringUTF(msg.c_str()), result);
+                                          jenv->NewStringUTF(msg.c_str()), static_cast<jlong>(result));
         if (jenv->Throw(static_cast<jthrowable>(jexception)) < 0) {
             fprintf(stderr, "Failed to throw exception: %s.", msg.c_str());
             std::exit(EXIT_FAILURE);
@@ -96,23 +114,24 @@ JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_preparePatterns(
 }
 
 JNIEXPORT jobject JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_match(
-        JNIEnv* jenv, jobject, jlong jinstance_handle, jstring jinput) {
-    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_handle);
-    if (instance == nullptr)
-        return nullptr;
+        JNIEnv* jenv, jobject, jlong jinstance_id, jstring jinput) {
+    HyperscanWrapper* instance = GetHyperscanInstance(jenv, jinstance_id);
+    if (instance == nullptr) {
+        return nullptr; // C++ continues to work after Java exception is thrown
+    }
 
     auto input = jenv->GetStringUTFChars(jinput, nullptr);
+    if (input == nullptr) {
+        ThrowJavaException(jenv, java_assertion_error_path, "Unable to convert java 'input' string to cpp string!");
+        return nullptr; // C++ continues to work after Java exception is thrown
+    }
     std::set<unsigned int> results;
     auto error_occurred = !instance->Match(input, &results);
     jenv->ReleaseStringUTFChars(jinput, input);
 
     if (error_occurred) {
-        jclass clazz = jenv->FindClass(java_assertion_error_path);
-        if (jenv->ThrowNew(clazz, instance->GetLastError()) < 0) {
-            fprintf(stderr, "Failed to throw exception: %s.", instance->GetLastError());
-            std::exit(EXIT_FAILURE);
-        }
-        return nullptr;
+        ThrowJavaException(jenv, java_assertion_error_path, instance->GetLastError());
+        return nullptr; // C++ continues to work after Java exception is thrown
     }
 
     auto jarraylist_clazz = jenv->FindClass("java/util/ArrayList");
@@ -126,7 +145,9 @@ JNIEXPORT jobject JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_match(
         for (auto& result : results) {
             auto element = jenv->NewObject(jlong_clazz, jlong_constructor, static_cast<jlong>(result));
             if (JNI_TRUE != jenv->CallBooleanMethod(jresult, jarraylist_add, element)) {
-                fprintf(stderr, "Element was not added to array: %d", result);
+                ThrowJavaException(jenv, java_assertion_error_path, "Element was not added to array: "
+                    + std::to_string(result));
+                return nullptr; // C++ continues to work after Java exception is thrown
             }
         }
     }

@@ -56,7 +56,7 @@ class HyperscanWrapper {
     bool Match(const std::string& input, std::set<unsigned int>* results);
 
     // Returns a string explanation of the last error that has occurred.
-    const char* GetLastError() const;
+    std::string GetLastError() const;
 
   private:
     void CleanUp();
