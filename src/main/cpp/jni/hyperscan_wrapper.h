@@ -48,7 +48,7 @@ class HyperscanWrapper {
     // The caller MUST call this method before calling Match() if the patterns set has changed.
     // Returns 0 on success, < 0 if error is not specific to a pattern, > 0 id of the first
     // erroneous pattern. Call GetLastError() for a string explanation of the error.
-    int CompilePatterns();
+    int64_t CompilePatterns();
 
     // Matches the given string against all patterns in the current pattern set and stores the
     // pattern ids that match in results.

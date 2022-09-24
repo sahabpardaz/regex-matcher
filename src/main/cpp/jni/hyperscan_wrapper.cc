@@ -1,6 +1,5 @@
 #include "hyperscan_wrapper.h"
 
-#include <cassert>
 #include <cstdlib>
 #include <vector>
 
@@ -23,17 +22,12 @@ HyperscanWrapper::~HyperscanWrapper() {
 }
 
 void HyperscanWrapper::AddPattern(unsigned int id, const char* pattern, bool is_case_sensitive) {
-    assert(pattern != nullptr);
-    assert(id > 0);
-
     patterns_.insert(pair<unsigned int, pair<string, bool> >(
         id, pair<string, bool>(pattern, is_case_sensitive)));
     is_compile_required_ = true;
 }
 
 bool HyperscanWrapper::RemovePattern(unsigned int id) {
-    assert(id > 0);
-
     if (0 == patterns_.erase(id)) {
         return false;
     }
@@ -42,7 +36,7 @@ bool HyperscanWrapper::RemovePattern(unsigned int id) {
     return true;
 }
 
-int HyperscanWrapper::CompilePatterns() {
+int64_t HyperscanWrapper::CompilePatterns() {
     if (!is_compile_required_) {
         return 0;
     }
@@ -77,16 +71,21 @@ int HyperscanWrapper::CompilePatterns() {
             cstr_patterns.size(), CH_MODE_NOGROUPS, nullptr, &pattern_database_, &compile_err);
     if (error != CH_SUCCESS) {
         if (error == CH_COMPILER_ERROR) {
-            auto erroneous_id = compile_err->expression;
+            auto erroneous_index = compile_err->expression;
+
             last_error_.assign("Unable to compile patterns: error = ").append(compile_err->message);
-            if (erroneous_id >= 0) {
+            if (erroneous_index >= 0) {
                 // Convert index to pattern id
-                erroneous_id = pattern_ids[erroneous_id];
+                auto erroneous_pattern_id = pattern_ids[erroneous_index];
                 last_error_.append(", erroneous pattern id = ");
-                last_error_ += to_string(erroneous_id);
+                last_error_ += to_string(erroneous_pattern_id);
+                ch_free_compile_error(compile_err);
+                return erroneous_pattern_id;
+            } else {
+                last_error_.append(", unknown expression index = ");
+                last_error_ += to_string(erroneous_index);
+                return -1;
             }
-            ch_free_compile_error(compile_err);
-            return erroneous_id;
         } else {
             last_error_ = "An unexpected error occurred: " + to_string(error);
             return -1;

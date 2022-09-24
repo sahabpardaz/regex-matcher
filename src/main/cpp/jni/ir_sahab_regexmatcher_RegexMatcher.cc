@@ -5,10 +5,12 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <climits>
 
 using sahab::HyperscanWrapper;
 
 const char* java_assertion_error_path = "java/lang/AssertionError";
+const char* java_illegal_argument_exception_path = "java/lang/IllegalArgumentException";
 const char* java_pattern_preparation_exception_path = "ir/sahab/regexmatcher/exception/PatternPreparationException";
 
 // The whole point of these class is to provide a mapping from Java world to C++ world.
@@ -54,7 +56,7 @@ JNIEXPORT jlong JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_newInstance(
     num_created_instances++;
     instances[num_created_instances] = std::unique_ptr<HyperscanWrapper>(new HyperscanWrapper());
     instances_map_mutex.unlock();
-    return num_created_instances;
+    return static_cast<jlong>(num_created_instances);
 }
 
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_close(
@@ -72,12 +74,19 @@ JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_addPattern(
         return; // C++ continues to work after Java exception is thrown
     }
 
+    auto pattern_id = static_cast<int64_t>(jpattern_id);
+    if (pattern_id <= 0 || pattern_id > UINT_MAX) {
+        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must between 0 and "
+            + std::to_string(UINT_MAX) + ": pattern ID = " + std::to_string(pattern_id));
+        return; // C++ continues to work after Java exception is thrown
+    }
+
     auto pattern = jenv->GetStringUTFChars(jpattern, nullptr);
     if (pattern == nullptr) {
         ThrowJavaException(jenv, java_assertion_error_path, "Unable to convert java 'pattern' string to cpp string!");
         return; // C++ continues to work after Java exception is thrown
     }
-    instance->AddPattern(static_cast<unsigned int>(jpattern_id), pattern, (bool)(is_case_sensitive == JNI_TRUE));
+    instance->AddPattern(static_cast<unsigned int>(pattern_id), pattern, (bool)(is_case_sensitive == JNI_TRUE));
     jenv->ReleaseStringUTFChars(jpattern, pattern);
 }
 
@@ -88,7 +97,14 @@ JNIEXPORT jboolean JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_removePattern
         return JNI_FALSE; // C++ continues to work after Java exception is thrown
     }
 
-    return instance->RemovePattern(static_cast<unsigned int>(jpattern_id)) ? JNI_TRUE : JNI_FALSE;
+    auto pattern_id = static_cast<int64_t>(jpattern_id);
+    if (pattern_id <= 0 || pattern_id > UINT_MAX) {
+        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must between 0 and "
+            + std::to_string(UINT_MAX) + ": pattern ID = " + std::to_string(pattern_id));
+        return JNI_FALSE; // C++ continues to work after Java exception is thrown
+    }
+
+    return instance->RemovePattern(static_cast<unsigned int>(pattern_id)) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_preparePatterns(
@@ -109,8 +125,8 @@ JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_preparePatterns(
             fprintf(stderr, "Failed to throw exception: %s.", msg.c_str());
             std::exit(EXIT_FAILURE);
         }
-        return;
     }
+    return;
 }
 
 JNIEXPORT jobject JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_match(
