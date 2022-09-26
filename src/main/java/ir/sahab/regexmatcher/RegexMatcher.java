@@ -31,16 +31,16 @@ import org.slf4j.LoggerFactory;
 public class RegexMatcher implements PatternMatcher {
 
     /*
-     * Following the JNI standard, the static block loads the native library once for the class.
-     * In order to be able to differentiate between different instances of this class a native
-     * handle is created per instance. This handle is managed by the native code and will be
-     * passed as an argument to methods that call into native code.
+     * Following the JNI standard, the static block loads the native library once for the class. In order to be able to
+     * differentiate between different instances of this class a native instance is created per java instance. This
+     * native instance is managed by the native code and its ID will be passed as an argument to methods that call into
+     * native code.
      */
     static {
         // System.load cannot load libraries within a jar. So we have to extract it to a
         // temporary location and load it from there.
         Logger logger = LoggerFactory.getLogger(RegexMatcher.class);
-        logger.info("Extracting regex mathcer JNI library for loading ...");
+        logger.info("Extracting regex matcher JNI library for loading ...");
 
         URL nativeLibraryResource = RegexMatcher.class.getClassLoader().getResource("lib_jni.tar.gz");
         if (nativeLibraryResource == null) {
@@ -84,41 +84,41 @@ public class RegexMatcher implements PatternMatcher {
     }
 
     /*
-     * Each instance of the class allocates native resources. A handle to access these resources
-     * is stored in the following variable. This handle is passed as an argument to methods that
+     * Each instance of the class allocates native resources. A instance ID to access these resources
+     * is stored in the following variable. This instance ID is passed as an argument to methods that
      * call into native code.
      */
-    private final long nativeHandle;
+    private final long instanceId;
 
     public RegexMatcher() {
-        nativeHandle = newInstance();
+        instanceId = newInstance();
     }
 
     /**
-     * Adds a new regex the the engine. Errors in pattern will not be detected immendiately, because
+     * Adds a new regex to the engine. Errors in pattern will not be detected immediately, because
      * the pattern is not validated here. Rather it is validated during {@link #preparePatterns()}.
      *
      * @param patternId a positive number identifying the pattern. Multiple patterns may share
      *        the same pattern id.
      * @param pattern the pattern must conform to PCRE syntax: http://www.pcre.org/.
-     * @param isCaseSensitive whether the pattern is case sensitive. This parameter has less
+     * @param isCaseSensitive whether the pattern is case-sensitive. This parameter has less
      *        precedence than inline regex flags. e.g. the following pattern is
-     *        case sensitive: <code>addPattern(1, "(?-i)abcd", false)</code>.
+     *        case-sensitive: <code>addPattern(1, "(?-i)abcd", false)</code>.
      * @see PatternMatcher#addPattern(long, String, boolean)
      */
     @Override
     public void addPattern(long patternId, String pattern, boolean isCaseSensitive) {
-        addPattern(nativeHandle, patternId, pattern, isCaseSensitive);
+        addPattern(instanceId, patternId, pattern, isCaseSensitive);
     }
 
-    private native void addPattern(long instanceHandle, long patternId, String pattern, boolean isCaseSensitive);
+    private native void addPattern(long instanceId, long patternId, String pattern, boolean isCaseSensitive);
 
     @Override
     public boolean removePattern(long patternId) {
-        return removePattern(nativeHandle, patternId);
+        return removePattern(instanceId, patternId);
     }
 
-    private native boolean removePattern(long instanceHandle, long patternId);
+    private native boolean removePattern(long instanceId, long patternId);
 
     /**
      * Compiles the set of patterns into a database to be used later for matching.<br/>
@@ -131,17 +131,17 @@ public class RegexMatcher implements PatternMatcher {
      */
     @Override
     public void preparePatterns() throws PatternPreparationException {
-        preparePatterns(nativeHandle);
+        preparePatterns(instanceId);
     }
 
-    private native void preparePatterns(long instanceHandle) throws PatternPreparationException;
+    private native void preparePatterns(long instanceId) throws PatternPreparationException;
 
     @Override
     public Set<Long> match(String input) {
-        return new HashSet<>(match(nativeHandle, input));
+        return new HashSet<>(match(instanceId, input));
     }
 
-    private native List<Long> match(long instanceHandle, String input);
+    private native List<Long> match(long instanceId, String input);
 
     /**
      * Release native resources being held by the object.<br/>
@@ -150,13 +150,13 @@ public class RegexMatcher implements PatternMatcher {
      */
     @Override
     public void close() {
-        close(nativeHandle);
+        close(instanceId);
     }
 
-    private native void close(long instanceHandle);
+    private native void close(long instanceId);
 
     /**
-     * Initializes a new instance of regular expression matching engine and returns a handle that
+     * Initializes a new instance of regular expression matching engine and returns an instance ID that
      * will be used in other native method calls.
      */
     private native long newInstance();

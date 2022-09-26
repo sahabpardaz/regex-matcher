@@ -103,6 +103,21 @@ public class RegexMatcherTest {
         matcher.match("");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testBigInvalidPatternId() throws Exception {
+        matcher.addPattern(Long.MAX_VALUE, "a+", false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testZeroPatternId() throws Exception {
+        matcher.addPattern(0L, "a+", false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNegativePatternId() throws Exception {
+        matcher.addPattern(-1L, "a+", false);
+    }
+
     @Test
     public void testPatternsWithCharacterClasses() throws PatternPreparationException {
         matcher.addPattern(1L, "^\\w+$", false);
@@ -116,14 +131,15 @@ public class RegexMatcherTest {
     @Test
     public void testInvalidRegexSyntax() {
         try {
-            matcher.addPattern(100L, "abc", false);   // OK
-            matcher.addPattern(200L, "(abc", false);  // Missing closing parenthesis.
-            matcher.addPattern(300L, "abcd", false);  // OK
-            matcher.addPattern(400L, "abcd)", false); // Missing open paranthesis, but only the first error is reported.
+            matcher.addPattern(1000000000L, "ab", false);   // OK
+            matcher.addPattern(2000000000L, "(ab", false);  // Missing closing parenthesis.
+            matcher.addPattern(3000000000L, "abd", false);  // OK
+            matcher.addPattern(4000000000L, // Missing open parenthesis, but only the first error is reported.
+                    "abd)", false);
             matcher.preparePatterns();
             fail();
         } catch (PatternPreparationException ex) {
-            assertEquals(200L, ex.getErroneousPatternId());
+            assertEquals(2000000000L, ex.getErroneousPatternId());
         }
     }
 

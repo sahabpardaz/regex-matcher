@@ -1,6 +1,5 @@
 #include "hyperscan_wrapper.h"
 
-#include <cassert>
 #include <cstdlib>
 #include <vector>
 
@@ -23,17 +22,12 @@ HyperscanWrapper::~HyperscanWrapper() {
 }
 
 void HyperscanWrapper::AddPattern(unsigned int id, const char* pattern, bool is_case_sensitive) {
-    assert(pattern != nullptr);
-    assert(id > 0);
-
     patterns_.insert(pair<unsigned int, pair<string, bool> >(
         id, pair<string, bool>(pattern, is_case_sensitive)));
     is_compile_required_ = true;
 }
 
 bool HyperscanWrapper::RemovePattern(unsigned int id) {
-    assert(id > 0);
-
     if (0 == patterns_.erase(id)) {
         return false;
     }
@@ -42,7 +36,7 @@ bool HyperscanWrapper::RemovePattern(unsigned int id) {
     return true;
 }
 
-int HyperscanWrapper::CompilePatterns() {
+int64_t HyperscanWrapper::CompilePatterns() {
     if (!is_compile_required_) {
         return 0;
     }
@@ -76,26 +70,27 @@ int HyperscanWrapper::CompilePatterns() {
     auto error = ch_compile_multi(cstr_patterns.data(), flags.data(), pattern_ids.data(),
             cstr_patterns.size(), CH_MODE_NOGROUPS, nullptr, &pattern_database_, &compile_err);
     if (error != CH_SUCCESS) {
-        if (error == CH_COMPILER_ERROR) {
-            auto erroneous_id = compile_err->expression;
-            last_error_.assign("Unable to compile patterns: error = ").append(compile_err->message);
-            if (erroneous_id >= 0) {
-                // Convert index to pattern id
-                erroneous_id = pattern_ids[erroneous_id];
-                last_error_.append(", erroneous pattern id = ");
-                last_error_ += to_string(erroneous_id);
-            }
-            ch_free_compile_error(compile_err);
-            return erroneous_id;
+        auto erroneous_pattern_index = compile_err->expression;
+
+        last_error_ = "Unable to compile patterns: error = ";
+        last_error_.append(compile_err->message);
+        ch_free_compile_error(compile_err);
+        if (erroneous_pattern_index >= 0) {
+            // Convert index to pattern id
+            auto erroneous_pattern_id = pattern_ids[erroneous_pattern_index];
+            last_error_.append(", erroneous pattern id = ");
+            last_error_ += to_string(erroneous_pattern_id);
+            return erroneous_pattern_id;
         } else {
-            last_error_ = "An unexpected error occurred: " + to_string(error);
+            last_error_.append(", unknown expression index = ");
+            last_error_ += to_string(erroneous_pattern_index);
             return -1;
         }
     }
 
     error = ch_alloc_scratch(pattern_database_, &scratch_);
     if (error != CH_SUCCESS) {
-        last_error_ = "ERROR: Unable to allocate scratch:  error = " + to_string(error);
+        last_error_ = "Unable to allocate scratch: error = " + to_string(error);
         return -1;
     }
 
@@ -129,8 +124,8 @@ bool HyperscanWrapper::Match(const string& input, set<unsigned int>* results) {
     return true;
 }
 
-const char* HyperscanWrapper::GetLastError() const {
-    return last_error_.c_str();
+std::string HyperscanWrapper::GetLastError() const {
+    return last_error_;
 }
 
 void HyperscanWrapper::CleanUp() {
@@ -138,14 +133,14 @@ void HyperscanWrapper::CleanUp() {
     if (scratch_ != nullptr) {
         error = ch_free_scratch(scratch_);
         if (error != CH_SUCCESS) {
-            fprintf(stderr, "ERROR: Unable to free scratch: error = %d\n", error);
+            fprintf(stderr, "Unable to free scratch: error = %d\n", error);
         }
         scratch_ = nullptr;
     }
     if (pattern_database_ != nullptr) {
         error = ch_free_database(pattern_database_);
         if (error != CH_SUCCESS) {
-            fprintf(stderr, "ERROR: Unable to free pattern database: error = %d\n", error);
+            fprintf(stderr, "Unable to free pattern database: error = %d\n", error);
         }
         pattern_database_ = nullptr;
     }
