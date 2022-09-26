@@ -72,7 +72,7 @@ int64_t HyperscanWrapper::CompilePatterns() {
     if (error != CH_SUCCESS) {
         auto erroneous_pattern_index = compile_err->expression;
 
-        last_error_ = ("Unable to compile patterns: error = ");
+        last_error_ = "Unable to compile patterns: error = ";
         last_error_.append(compile_err->message);
         ch_free_compile_error(compile_err);
         if (erroneous_pattern_index >= 0) {
