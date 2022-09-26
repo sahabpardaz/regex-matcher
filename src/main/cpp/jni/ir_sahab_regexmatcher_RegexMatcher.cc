@@ -24,8 +24,8 @@ const char* java_pattern_preparation_exception_path = "ir/sahab/regexmatcher/exc
 //       3) javah -cp . <full_package_name_of_desired_class> (example ir.sahab.regexmatcher.RegexMatcher)
 // Note: We also keep track of live HyperscanWrapper instances. This is done by keeping a map of
 //       created instances. An instance is created by calling newInstance() and it is destroyed by calling close().
-unsigned int num_created_instances = 0;
-std::map<unsigned int, std::unique_ptr<HyperscanWrapper> > instances;
+int64_t num_created_instances = 0;
+std::map<int64_t, std::unique_ptr<HyperscanWrapper> > instances;
 std::mutex instances_map_mutex;
 
 static void ThrowJavaException(JNIEnv* jenv, const char* java_error_class_path, std::string message) {
@@ -38,7 +38,7 @@ static void ThrowJavaException(JNIEnv* jenv, const char* java_error_class_path, 
 
 static HyperscanWrapper* GetHyperscanInstance(JNIEnv* jenv, jlong jinstance_id) {
     HyperscanWrapper* instance = nullptr;
-    auto instance_id = static_cast<unsigned int>(jinstance_id);
+    auto instance_id = static_cast<int64_t>(jinstance_id);
     try {
         instances_map_mutex.lock();
         instance = instances.at(instance_id).get();
@@ -62,7 +62,7 @@ JNIEXPORT jlong JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_newInstance(
 JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_close(
         JNIEnv* jenv, jobject jobj, jlong jinstance_id) {
     instances_map_mutex.lock();
-    instances.erase(static_cast<unsigned int>(jinstance_id));
+    instances.erase(static_cast<int64_t>(jinstance_id));
     instances_map_mutex.unlock();
 }
 

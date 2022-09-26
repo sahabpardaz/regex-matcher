@@ -70,31 +70,27 @@ int64_t HyperscanWrapper::CompilePatterns() {
     auto error = ch_compile_multi(cstr_patterns.data(), flags.data(), pattern_ids.data(),
             cstr_patterns.size(), CH_MODE_NOGROUPS, nullptr, &pattern_database_, &compile_err);
     if (error != CH_SUCCESS) {
-        if (error == CH_COMPILER_ERROR) {
-            auto erroneous_index = compile_err->expression;
+        auto erroneous_pattern_index = compile_err->expression;
 
-            last_error_.assign("Unable to compile patterns: error = ").append(compile_err->message);
-            if (erroneous_index >= 0) {
-                // Convert index to pattern id
-                auto erroneous_pattern_id = pattern_ids[erroneous_index];
-                last_error_.append(", erroneous pattern id = ");
-                last_error_ += to_string(erroneous_pattern_id);
-                ch_free_compile_error(compile_err);
-                return erroneous_pattern_id;
-            } else {
-                last_error_.append(", unknown expression index = ");
-                last_error_ += to_string(erroneous_index);
-                return -1;
-            }
+        last_error_ = ("Unable to compile patterns: error = ");
+        last_error_.append(compile_err->message);
+        ch_free_compile_error(compile_err);
+        if (erroneous_pattern_index >= 0) {
+            // Convert index to pattern id
+            auto erroneous_pattern_id = pattern_ids[erroneous_pattern_index];
+            last_error_.append(", erroneous pattern id = ");
+            last_error_ += to_string(erroneous_pattern_id);
+            return erroneous_pattern_id;
         } else {
-            last_error_ = "An unexpected error occurred: " + to_string(error);
+            last_error_.append(", unknown expression index = ");
+            last_error_ += to_string(erroneous_pattern_index);
             return -1;
         }
     }
 
     error = ch_alloc_scratch(pattern_database_, &scratch_);
     if (error != CH_SUCCESS) {
-        last_error_ = "ERROR: Unable to allocate scratch:  error = " + to_string(error);
+        last_error_ = "Unable to allocate scratch: error = " + to_string(error);
         return -1;
     }
 
@@ -137,14 +133,14 @@ void HyperscanWrapper::CleanUp() {
     if (scratch_ != nullptr) {
         error = ch_free_scratch(scratch_);
         if (error != CH_SUCCESS) {
-            fprintf(stderr, "ERROR: Unable to free scratch: error = %d\n", error);
+            fprintf(stderr, "Unable to free scratch: error = %d\n", error);
         }
         scratch_ = nullptr;
     }
     if (pattern_database_ != nullptr) {
         error = ch_free_database(pattern_database_);
         if (error != CH_SUCCESS) {
-            fprintf(stderr, "ERROR: Unable to free pattern database: error = %d\n", error);
+            fprintf(stderr, "Unable to free pattern database: error = %d\n", error);
         }
         pattern_database_ = nullptr;
     }
