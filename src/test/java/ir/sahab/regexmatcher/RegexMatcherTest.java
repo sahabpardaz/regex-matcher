@@ -25,14 +25,14 @@ public class RegexMatcherTest {
     @Test
     public void testMatchExactPatterns() throws PatternPreparationException {
         // NOTE: patterns start with ^ and end with $. So a match occurs only when the whole input matches the pattern.
-        matcher.addPattern(1L, "^a+$", false);
-        matcher.addPattern(2L, "^(a|b)+$", false);
+        matcher.addPattern(0L, "^a+$", false);
+        matcher.addPattern(1L, "^(a|b)+$", false);
         matcher.preparePatterns();
 
         assertTrue(matcher.match("").isEmpty());
-        assertEquals(new HashSet<>(Arrays.asList(1L, 2L)), matcher.match("a"));
-        assertEquals(new HashSet<>(Collections.singletonList(2L)), matcher.match("ab"));
-        assertEquals(new HashSet<>(Collections.singletonList(2L)), matcher.match("b"));
+        assertEquals(new HashSet<>(Arrays.asList(0L, 1L)), matcher.match("a"));
+        assertEquals(new HashSet<>(Collections.singletonList(1L)), matcher.match("ab"));
+        assertEquals(new HashSet<>(Collections.singletonList(1L)), matcher.match("b"));
     }
 
     @Test
@@ -106,11 +106,6 @@ public class RegexMatcherTest {
     @Test(expected = IllegalArgumentException.class)
     public void testBigInvalidPatternId() throws Exception {
         matcher.addPattern(Long.MAX_VALUE, "a+", false);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testZeroPatternId() throws Exception {
-        matcher.addPattern(0L, "a+", false);
     }
 
     @Test(expected = IllegalArgumentException.class)

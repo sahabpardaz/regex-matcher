@@ -75,9 +75,9 @@ JNIEXPORT void JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_addPattern(
     }
 
     auto pattern_id = static_cast<int64_t>(jpattern_id);
-    if (pattern_id <= 0 || pattern_id > UINT_MAX) {
-        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must between 0 and "
-            + std::to_string(UINT_MAX) + ": pattern ID = " + std::to_string(pattern_id));
+    if (pattern_id < 0 || pattern_id > UINT_MAX) {
+        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must be in range [0, "
+            + std::to_string(UINT_MAX) + "]: pattern ID = " + std::to_string(pattern_id));
         return; // C++ continues to work after Java exception is thrown
     }
 
@@ -98,9 +98,9 @@ JNIEXPORT jboolean JNICALL Java_ir_sahab_regexmatcher_RegexMatcher_removePattern
     }
 
     auto pattern_id = static_cast<int64_t>(jpattern_id);
-    if (pattern_id <= 0 || pattern_id > UINT_MAX) {
-        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must between 0 and "
-            + std::to_string(UINT_MAX) + ": pattern ID = " + std::to_string(pattern_id));
+    if (pattern_id < 0 || pattern_id > UINT_MAX) {
+        ThrowJavaException(jenv, java_illegal_argument_exception_path, "Pattern ID must be in range [0, "
+            + std::to_string(UINT_MAX) + "]: pattern ID = " + std::to_string(pattern_id));
         return JNI_FALSE; // C++ continues to work after Java exception is thrown
     }
 
