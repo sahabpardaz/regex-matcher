@@ -5,7 +5,7 @@
 
     <groupId>ir.sahab</groupId>
     <artifactId>regex-matcher</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <description>
         This library provides facilities to match an input string against a collection of regex patterns.
     </description>
